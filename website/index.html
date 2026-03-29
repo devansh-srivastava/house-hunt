@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+  <title>House Hunt</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- Home View -->
+    <section id="home-view">
+      <header class="header">
+        <h1>House Hunt 🏠</h1>
+      </header>
+      <div class="sticky-search">
+        <input type="text" id="search" placeholder="search societies..." autocomplete="off">
+      </div>
+      <div id="society-list" class="card-list"></div>
+      <div id="empty" class="empty" style="display:none">no societies yet</div>
+    </section>
+
+    <!-- Detail View -->
+    <section id="detail-view" style="display:none">
+      <a href="#/" class="back-link">← back</a>
+      <div id="detail-content"></div>
+    </section>
+
+  </div>
+  <script src="config.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

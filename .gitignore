@@ -1,0 +1,21 @@
+bot/.env
+
+# Python cache / venv
+bot/venv/
+bot/__pycache__/
+__pycache__/
+*.pyc
+.venv/
+
+# Editor
+.idea/
+.vscode/settings.json
+
+# Playwright artefacts
+.playwright-mcp/
+website/.playwright-mcp/
+
+# OS
+.DS_Store
+Thumbs.db
+
