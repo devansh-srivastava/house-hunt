@@ -409,3 +409,78 @@ body {
 }
 .note-add:hover { background: #2563EB; }
 .note-add:active { background: #1D4ED8; }
+
+/* ── Delete Button ── */
+.delete-btn {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 20px;
+  padding: 10px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex: 0 0 auto;
+  width: 44px;
+}
+.delete-btn:hover {
+  background: #FEF2F2;
+  border-color: #F87171;
+  color: #DC2626;
+}
+
+/* ── Confirmation Modal ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.15s ease-out;
+}
+.modal-box {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 24px;
+  max-width: 340px;
+  width: 100%;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  text-align: center;
+}
+.modal-text {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+.modal-actions {
+  display: flex;
+  gap: 10px;
+}
+.modal-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 20px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+}
+.modal-btn-cancel {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.modal-btn-cancel:hover { background: var(--border); }
+.modal-btn-delete {
+  background: #EF4444;
+  color: white;
+}
+.modal-btn-delete:hover { background: #DC2626; }
+.modal-btn-delete:active { background: #B91C1C; }

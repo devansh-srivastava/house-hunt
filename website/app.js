@@ -103,6 +103,46 @@ async function loadDetail(id) {
   return { society: sRes.data, configs, quotes: qRes.data || [] };
 }
 
+// ── Delete Quote ──
+let pendingDeleteId = null;
+let pendingDeleteQuotes = null;
+
+function showDeleteModal(quoteId, quotes) {
+  pendingDeleteId = quoteId;
+  pendingDeleteQuotes = quotes;
+  document.getElementById('delete-modal').style.display = 'flex';
+}
+
+function hideDeleteModal() {
+  pendingDeleteId = null;
+  pendingDeleteQuotes = null;
+  document.getElementById('delete-modal').style.display = 'none';
+}
+
+async function confirmDelete() {
+  const quoteId = pendingDeleteId;
+  const quotes = pendingDeleteQuotes;
+  if (!quoteId) return;
+  hideDeleteModal();
+
+  if (supabase) {
+    await supabase.from('broker_quotes').delete().eq('id', quoteId);
+  } else {
+    const idx = DEMO.quotes.findIndex(q => q.id === quoteId);
+    if (idx !== -1) DEMO.quotes.splice(idx, 1);
+  }
+  // Remove from local quotes array used by detail view
+  const qi = quotes.findIndex(q => q.id === quoteId);
+  if (qi !== -1) quotes.splice(qi, 1);
+
+  // Re-render
+  const activePill = document.querySelector('.config-pill.active');
+  if (activePill) {
+    document.getElementById('quotes-container').innerHTML = renderQuotes(quotes, activePill.dataset.configId);
+    attachQuoteEvents(quotes);
+  }
+}
+
 async function saveQuoteStatus(quoteId, status, quotes) {
   // Use local cache for toggle logic — avoids an extra round-trip and keeps
   // the UI snappy even when the DB write is slow or fails.
@@ -209,6 +249,7 @@ function renderQuotes(quotes, configId) {
         <button class="status-btn${status === 'interested' ? ' active-interested' : ''}" data-quote-id="${q.id}" data-status="interested">👍 interested</button>
         <button class="status-btn${status === 'not-interested' ? ' active-not-interested' : ''}" data-quote-id="${q.id}" data-status="not-interested">👎 pass</button>
         ${phone ? `<a href="https://wa.me/${phone}" target="_blank" rel="noopener noreferrer" class="whatsapp-btn">💬</a>` : ''}
+        <button class="delete-btn" data-quote-id="${q.id}">🗑️</button>
       </div>
       ${renderNotesSection(q.id)}
     </div>`;
@@ -222,12 +263,17 @@ function attachQuoteEvents(quotes) {
       const quoteId = btn.dataset.quoteId;
       const status = btn.dataset.status;
       await saveQuoteStatus(quoteId, status, quotes);
-      // Re-render current config quotes with updated status
       const activePill = document.querySelector('.config-pill.active');
       if (activePill) {
         document.getElementById('quotes-container').innerHTML = renderQuotes(quotes, activePill.dataset.configId);
         attachQuoteEvents(quotes);
       }
+    });
+  });
+  document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showDeleteModal(btn.dataset.quoteId, quotes);
     });
   });
 }
@@ -302,6 +348,13 @@ function setupEvents() {
   });
 
   window.addEventListener('hashchange', route);
+
+  // Delete modal
+  document.getElementById('modal-cancel').addEventListener('click', hideDeleteModal);
+  document.getElementById('modal-confirm').addEventListener('click', confirmDelete);
+  document.getElementById('delete-modal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) hideDeleteModal();
+  });
 
   // Notes delegation
   document.getElementById('detail-view').addEventListener('click', (e) => {
