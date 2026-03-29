@@ -42,6 +42,23 @@ let allSocieties = [];
 let allConfigs = [];
 let currentSearch = '';
 
+// ── Notes (localStorage) ──
+const NOTES_KEY = 'house_hunt_notes';
+function getAllNotes() {
+  try { return JSON.parse(localStorage.getItem(NOTES_KEY) || '{}'); } catch { return {}; }
+}
+function getNotes(quoteId) { return getAllNotes()[quoteId] || []; }
+function addNote(quoteId, text) {
+  const all = getAllNotes();
+  if (!all[quoteId]) all[quoteId] = [];
+  all[quoteId].push({ text, at: new Date().toISOString() });
+  localStorage.setItem(NOTES_KEY, JSON.stringify(all));
+}
+function deleteNote(quoteId, index) {
+  const all = getAllNotes();
+  if (all[quoteId]) { all[quoteId].splice(index, 1); localStorage.setItem(NOTES_KEY, JSON.stringify(all)); }
+}
+
 // ── Init ──
 async function init() {
   if (SUPABASE_URL && SUPABASE_KEY) {
@@ -193,6 +210,7 @@ function renderQuotes(quotes, configId) {
         <button class="status-btn${status === 'not-interested' ? ' active-not-interested' : ''}" data-quote-id="${q.id}" data-status="not-interested">👎 pass</button>
         ${phone ? `<a href="https://wa.me/${phone}" target="_blank" rel="noopener noreferrer" class="whatsapp-btn">💬</a>` : ''}
       </div>
+      ${renderNotesSection(q.id)}
     </div>`;
   }).join('')}</div>`;
 }
@@ -212,6 +230,42 @@ function attachQuoteEvents(quotes) {
       }
     });
   });
+}
+
+function renderNotesSection(quoteId, open = false) {
+  const notes = getNotes(quoteId);
+  const count = notes.length;
+  return `<div class="notes-section" data-quote-id="${quoteId}">
+    <button class="notes-toggle${open ? ' open' : ''}" data-quote-id="${quoteId}">
+      📝 ${count ? `${count} note${count !== 1 ? 's' : ''}` : 'add note'}
+    </button>
+    <div class="notes-body"${open ? '' : ' style="display:none"'}>
+      ${notes.map((n, i) => `<div class="note-item">
+        <div class="note-text">${esc(n.text)}</div>
+        <div class="note-meta">
+          <span class="note-time">${fmtNoteDate(n.at)}</span>
+          <button class="note-delete" data-quote-id="${quoteId}" data-index="${i}">×</button>
+        </div>
+      </div>`).join('')}
+      <div class="note-input-row">
+        <textarea class="note-input" data-quote-id="${quoteId}" placeholder="type a note…" rows="2"></textarea>
+        <button class="note-add" data-quote-id="${quoteId}">Add</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function fmtNoteDate(iso) {
+  const d = new Date(iso);
+  const diff = Date.now() - d;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  if (Math.floor(hrs / 24) === 1) return 'yesterday';
+  if (hrs < 168) return `${Math.floor(hrs / 24)}d ago`;
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
 // ── Router ──
@@ -248,6 +302,45 @@ function setupEvents() {
   });
 
   window.addEventListener('hashchange', route);
+
+  // Notes delegation
+  document.getElementById('detail-view').addEventListener('click', (e) => {
+    const toggle = e.target.closest('.notes-toggle');
+    const addBtn  = e.target.closest('.note-add');
+    const delBtn  = e.target.closest('.note-delete');
+    if (toggle) {
+      const section = toggle.closest('.notes-section');
+      const body    = section.querySelector('.notes-body');
+      const open    = body.style.display === 'none';
+      body.style.display = open ? 'block' : 'none';
+      toggle.classList.toggle('open', open);
+      if (open) section.querySelector('.note-input')?.focus();
+    } else if (addBtn) {
+      const qid     = addBtn.dataset.quoteId;
+      const section = document.querySelector(`.notes-section[data-quote-id="${qid}"]`);
+      const input   = section.querySelector('.note-input');
+      const text    = input.value.trim();
+      if (!text) return;
+      addNote(qid, text);
+      section.outerHTML = renderNotesSection(qid, true);
+    } else if (delBtn) {
+      const qid   = delBtn.dataset.quoteId;
+      const index = parseInt(delBtn.dataset.index);
+      deleteNote(qid, index);
+      document.querySelector(`.notes-section[data-quote-id="${qid}"]`).outerHTML = renderNotesSection(qid, true);
+    }
+  });
+  document.getElementById('detail-view').addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      const input = e.target.closest('.note-input');
+      if (!input) return;
+      const qid  = input.dataset.quoteId;
+      const text = input.value.trim();
+      if (!text) return;
+      addNote(qid, text);
+      document.querySelector(`.notes-section[data-quote-id="${qid}"]`).outerHTML = renderNotesSection(qid, true);
+    }
+  });
 }
 
 // ── Helpers ──

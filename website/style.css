@@ -312,3 +312,100 @@ body {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ── Visit Notes ── */
+.notes-toggle {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 10px 0 0;
+  margin-top: 12px;
+  text-align: left;
+  transition: color 0.15s;
+}
+.notes-toggle:hover,
+.notes-toggle.open { color: var(--text); }
+
+.notes-body {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.note-item {
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.note-text {
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+}
+.note-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+.note-time {
+  font-size: 11px;
+  color: var(--muted);
+}
+.note-delete {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 2px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+.note-delete:hover { color: #F87171; }
+
+.note-input-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.note-input {
+  width: 100%;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text);
+  resize: none;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.note-input:focus { border-color: var(--accent); }
+.note-input::placeholder { color: var(--muted); }
+
+.note-add {
+  align-self: flex-end;
+  padding: 6px 18px;
+  border-radius: 20px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.note-add:hover { background: #2563EB; }
+.note-add:active { background: #1D4ED8; }
