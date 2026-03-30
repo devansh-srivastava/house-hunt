@@ -43,6 +43,27 @@
     </div>
   </div>
 
+  <!-- Media Modal (photo/video grid for a quote) -->
+  <div id="media-modal" class="modal-overlay" style="display:none">
+    <div class="media-modal-box">
+      <div class="media-modal-header">
+        <span class="media-modal-title">Media</span>
+        <button class="media-modal-close">&times;</button>
+      </div>
+      <div id="media-grid" class="media-grid"></div>
+      <div id="media-empty" class="empty" style="display:none">no media yet</div>
+    </div>
+  </div>
+
+  <!-- Lightbox for full-screen media viewing -->
+  <div id="lightbox" class="lightbox-overlay" style="display:none">
+    <button class="lightbox-close">&times;</button>
+    <button class="lightbox-prev">&lsaquo;</button>
+    <button class="lightbox-next">&rsaquo;</button>
+    <div class="lightbox-counter"></div>
+    <div class="lightbox-content"></div>
+  </div>
+
   <script src="config.js"></script>
   <script type="module" src="app.js"></script>
 </body>

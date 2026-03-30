@@ -91,11 +91,11 @@ def insert_quote(config_id: str, broker_name: str | None, broker_phone: str | No
 
 # ── Save pipeline ────────────────────────────────────────
 
-def save_listing(society_name: str, listing: dict, broker_name: str, broker_phone: str) -> str:
-    """Find/create society → find/create config → insert quote. Returns society name."""
+def save_listing(society_name: str, listing: dict, broker_name: str, broker_phone: str) -> dict:
+    """Find/create society → find/create config → insert quote. Returns quote info dict."""
     society = find_or_create_society(society_name)
     config = find_or_create_config(society["id"], listing["config"], listing.get("area_sqft"))
-    insert_quote(
+    quote = insert_quote(
         config_id=config["id"],
         broker_name=broker_name,
         broker_phone=broker_phone,
@@ -105,7 +105,12 @@ def save_listing(society_name: str, listing: dict, broker_name: str, broker_phon
         notes=listing.get("notes"),
     )
     logger.info("[DB] Saved → '%s' / '%s'", society["name"], listing["config"])
-    return society["name"]
+    return {
+        "quote_id": quote["id"],
+        "short_id": quote["id"][:4].upper(),
+        "society_name": society["name"],
+        "config_type": listing["config"],
+    }
 
 
 # ── Queries (for /list and /status) ──────────────────────
@@ -137,3 +142,67 @@ def get_society_detail(name: str) -> dict | None:
             .execute().data
         )
     return {"society": society, "configs": configs, "quotes": quotes}
+
+
+# ── Property Media ───────────────────────────────────
+
+def save_property_media(quote_id: str, media_type: str, public_url: str,
+                        storage_path: str, telegram_file_id: str | None,
+                        telegram_file_unique_id: str | None, caption: str | None,
+                        uploaded_by: int | None) -> dict:
+    """Insert a media row linked to a broker quote."""
+    row = {
+        "quote_id": quote_id,
+        "media_type": media_type,
+        "public_url": public_url,
+        "storage_path": storage_path,
+    }
+    if telegram_file_id:
+        row["telegram_file_id"] = telegram_file_id
+    if telegram_file_unique_id:
+        row["telegram_file_unique_id"] = telegram_file_unique_id
+    if caption:
+        row["caption"] = caption
+    if uploaded_by:
+        row["uploaded_by"] = uploaded_by
+    media = get_db().table("property_media").insert(row).execute().data[0]
+    logger.info("[DB] Saved media → quote=%s | type=%s", quote_id[:8], media_type)
+    return media
+
+
+# ── Quote Operations (for /summary, /edit, /add) ────
+
+def get_recent_quotes(limit: int = 20) -> list[dict]:
+    """Fetch recent quotes with nested society name and config type."""
+    return (
+        get_db()
+        .table("broker_quotes")
+        .select("id, broker_name, price_lakh, floor, facing, added_on, "
+                "configurations(type, area_sqft, societies(name))")
+        .order("added_on", desc=True)
+        .limit(limit)
+        .execute()
+        .data
+    )
+
+
+def find_quote_by_short_id(short_id: str) -> list[dict]:
+    """Find quotes whose UUID starts with the given prefix (case-insensitive)."""
+    short_id = short_id.lower().strip()
+    # Fetch recent quotes and filter by prefix in Python (fine for personal use)
+    res = (
+        get_db()
+        .table("broker_quotes")
+        .select("id, broker_name, broker_phone, price_lakh, floor, facing, "
+                "notes, availability, config_id, added_on")
+        .order("added_on", desc=True)
+        .limit(100)
+        .execute()
+    )
+    return [q for q in res.data if q["id"].startswith(short_id)]
+
+
+def update_quote_fields(quote_id: str, updates: dict) -> None:
+    """Update specific fields on a broker quote."""
+    get_db().table("broker_quotes").update(updates).eq("id", quote_id).execute()
+    logger.info("[DB] Updated quote %s: %s", quote_id[:8], updates)

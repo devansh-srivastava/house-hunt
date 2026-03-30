@@ -49,3 +49,27 @@ CREATE INDEX IF NOT EXISTS idx_configurations_society ON configurations (society
 
 -- Index for quote lookups by config
 CREATE INDEX IF NOT EXISTS idx_broker_quotes_config ON broker_quotes (config_id);
+
+-- ── Property Media (photos/videos linked to a broker quote) ──
+
+CREATE TABLE IF NOT EXISTS property_media (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    quote_id UUID NOT NULL REFERENCES broker_quotes(id) ON DELETE CASCADE,
+    media_type TEXT NOT NULL CHECK (media_type IN ('image', 'video')),
+    public_url TEXT NOT NULL,
+    storage_path TEXT NOT NULL,
+    telegram_file_id TEXT,
+    telegram_file_unique_id TEXT,
+    caption TEXT,
+    uploaded_by BIGINT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Fast lookup: all media for a quote, newest last
+CREATE INDEX IF NOT EXISTS idx_property_media_quote_created
+ON property_media (quote_id, created_at DESC);
+
+-- Prevent duplicate uploads (same Telegram file forwarded twice)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_property_media_quote_unique_file
+ON property_media (quote_id, telegram_file_unique_id)
+WHERE telegram_file_unique_id IS NOT NULL;

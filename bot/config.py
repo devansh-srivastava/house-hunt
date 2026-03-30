@@ -14,3 +14,14 @@ SUPABASE_KEY = os.environ["SUPABASE_KEY"]
 ALLOWED_USER_ID = int(os.environ["ALLOWED_USER_ID"])
 
 GEMINI_MODEL = "gemini-2.5-flash"
+
+# ── Supabase Storage (for quote photos/videos) ──
+# Uses the same SUPABASE_URL + SUPABASE_KEY credentials as database writes.
+SUPABASE_MEDIA_BUCKET = os.environ.get("SUPABASE_MEDIA_BUCKET", "property-media").strip()
+
+# Media uploads are enabled when a bucket name is configured.
+MEDIA_UPLOADS_ENABLED = bool(SUPABASE_MEDIA_BUCKET)
+
+# ── Media Compression ──
+# Set to False in .env (COMPRESS_MEDIA=0) to skip compression.
+COMPRESS_MEDIA = os.environ.get("COMPRESS_MEDIA", "1").strip() not in ("0", "false", "no")

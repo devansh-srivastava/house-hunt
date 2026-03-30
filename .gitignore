@@ -1,11 +1,9 @@
 bot/.env
 
-# Python cache / venv
-bot/venv/
+# Python cache
 bot/__pycache__/
 __pycache__/
 *.pyc
-.venv/
 
 # Editor
 .idea/
@@ -18,4 +16,8 @@ website/.playwright-mcp/
 # OS
 .DS_Store
 Thumbs.db
+
+# Virtual environments
+venv/
+.venv/
 

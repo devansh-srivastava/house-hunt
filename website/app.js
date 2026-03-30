@@ -1,46 +1,30 @@
 // ── Config ──
 // Frontend config comes from config.js so the public key lives in one place.
-// Leave values empty to use built-in demo data.
 const runtimeConfig = window.HOUSE_HUNT_CONFIG || {};
 const SUPABASE_URL = runtimeConfig.supabaseUrl || '';
 const SUPABASE_KEY = runtimeConfig.supabaseKey || '';
-
-// ── Demo Data ──
-const DEMO = {
-  societies: [
-    { id: '1', name: 'Ace Aspire', location: 'Greater Noida West', created_at: '2025-03-20' },
-    { id: '2', name: 'Prateek Grand City', location: 'Siddharth Vihar', created_at: '2025-03-18' },
-    { id: '3', name: 'Gaur City 2', location: 'Greater Noida West', created_at: '2025-03-15' },
-    { id: '4', name: 'Supertech Capetown', location: 'Noida Sector 74', created_at: '2025-03-10' },
-    { id: '5', name: 'ATS Pristine', location: 'Noida Sector 150', created_at: '2025-03-08' },
-  ],
-  configurations: [
-    { id: 'c1', society_id: '1', type: '3BHK', area_sqft: 1250 },
-    { id: 'c2', society_id: '1', type: '2BHK', area_sqft: 950 },
-    { id: 'c3', society_id: '2', type: '3BHK', area_sqft: 1400 },
-    { id: 'c4', society_id: '3', type: '2BHK', area_sqft: 1050 },
-    { id: 'c5', society_id: '3', type: '3BHK', area_sqft: 1350 },
-    { id: 'c6', society_id: '3', type: '2.5BHK', area_sqft: 1150 },
-    { id: 'c7', society_id: '4', type: '3BHK', area_sqft: 1500 },
-    { id: 'c8', society_id: '5', type: '4BHK', area_sqft: 2200 },
-  ],
-  quotes: [
-    { id: 'q1', config_id: 'c1', broker_name: 'Ramesh', broker_phone: '919876543210', price_lakh: 85, floor: '4th', facing: 'East', availability: 'Ready to move', notes: null, added_on: '2025-03-24', status: 'interested' },
-    { id: 'q2', config_id: 'c1', broker_name: 'Sunil', broker_phone: '919876543211', price_lakh: 82, floor: '6th', facing: 'West', availability: 'Under construction', notes: 'Possession Dec 2025', added_on: '2025-03-20', status: null },
-    { id: 'q3', config_id: 'c2', broker_name: 'Ramesh', broker_phone: '919876543210', price_lakh: 62, floor: '3rd', facing: 'North', availability: 'Ready to move', notes: null, added_on: '2025-03-22', status: null },
-    { id: 'q4', config_id: 'c3', broker_name: 'Vikram', broker_phone: '919876543212', price_lakh: 95, floor: '8th', facing: 'South', availability: 'Ready to move', notes: 'Corner flat', added_on: '2025-03-22', status: 'interested' },
-    { id: 'q5', config_id: 'c4', broker_name: 'Anil', broker_phone: '919876543213', price_lakh: 55, floor: '2nd', facing: 'East', availability: 'Ready to move', notes: null, added_on: '2025-03-19', status: 'not-interested' },
-    { id: 'q6', config_id: 'c5', broker_name: 'Anil', broker_phone: '919876543213', price_lakh: 72, floor: '5th', facing: 'West', availability: 'Under construction', notes: 'Possession Mar 2026', added_on: '2025-03-18', status: null },
-    { id: 'q7', config_id: 'c7', broker_name: 'Deepak', broker_phone: '919876543214', price_lakh: 110, floor: '12th', facing: 'East', availability: 'Ready to move', notes: 'Well maintained', added_on: '2025-03-15', status: 'interested' },
-    { id: 'q8', config_id: 'c8', broker_name: 'Mohit', broker_phone: '919876543215', price_lakh: 180, floor: '15th', facing: 'North', availability: 'Ready to move', notes: 'Premium flat', added_on: '2025-03-12', status: 'not-interested' },
-  ],
-};
+const CONFIG_ERROR_TEXT = 'Missing Supabase frontend config. Set website/config.js with supabaseUrl and supabaseKey.';
 
 // ── State ──
 let supabase = null;
 let allSocieties = [];
 let allConfigs = [];
 let currentSearch = '';
+
+function renderConfigError() {
+  const homeView = document.getElementById('home-view');
+  const detailView = document.getElementById('detail-view');
+  homeView.style.display = 'block';
+  detailView.style.display = 'none';
+  document.getElementById('society-list').innerHTML = '';
+  const empty = document.getElementById('empty');
+  empty.style.display = 'block';
+  empty.textContent = CONFIG_ERROR_TEXT;
+}
+
+// ── Media State ──
+let currentMedia = [];
+let currentMediaIndex = 0;
 
 // ── Notes (localStorage) ──
 const NOTES_KEY = 'house_hunt_notes';
@@ -61,21 +45,21 @@ function deleteNote(quoteId, index) {
 
 // ── Init ──
 async function init() {
-  if (SUPABASE_URL && SUPABASE_KEY) {
-    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-    supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    setupEvents();
+    renderConfigError();
+    return;
   }
+
+  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+  supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
   setupEvents();
   await route();
 }
 
 // ── Data Loading ──
 async function loadHome() {
-  if (!supabase) {
-    allSocieties = DEMO.societies;
-    allConfigs = DEMO.configurations;
-    return;
-  }
   const [s, c] = await Promise.all([
     supabase.from('societies').select('*'),
     supabase.from('configurations').select('*'),
@@ -85,12 +69,6 @@ async function loadHome() {
 }
 
 async function loadDetail(id) {
-  if (!supabase) {
-    const society = DEMO.societies.find(s => s.id === id);
-    const configs = DEMO.configurations.filter(c => c.society_id === id);
-    const quotes = DEMO.quotes.filter(q => configs.some(c => c.id === q.config_id));
-    return { society, configs, quotes };
-  }
   const [sRes, cRes] = await Promise.all([
     supabase.from('societies').select('*').eq('id', id).single(),
     supabase.from('configurations').select('*').eq('society_id', id),
@@ -101,6 +79,16 @@ async function loadDetail(id) {
     ? await supabase.from('broker_quotes').select('*').in('config_id', configIds).order('added_on', { ascending: false })
     : { data: [] };
   return { society: sRes.data, configs, quotes: qRes.data || [] };
+}
+
+// ── Media Loading ──
+async function loadQuoteMedia(quoteId) {
+  const res = await supabase
+    .from('property_media')
+    .select('*')
+    .eq('quote_id', quoteId)
+    .order('created_at', { ascending: true });
+  return res.data || [];
 }
 
 // ── Delete Quote ──
@@ -125,12 +113,7 @@ async function confirmDelete() {
   if (!quoteId) return;
   hideDeleteModal();
 
-  if (supabase) {
-    await supabase.from('broker_quotes').delete().eq('id', quoteId);
-  } else {
-    const idx = DEMO.quotes.findIndex(q => q.id === quoteId);
-    if (idx !== -1) DEMO.quotes.splice(idx, 1);
-  }
+  await supabase.from('broker_quotes').delete().eq('id', quoteId);
   // Remove from local quotes array used by detail view
   const qi = quotes.findIndex(q => q.id === quoteId);
   if (qi !== -1) quotes.splice(qi, 1);
@@ -146,10 +129,9 @@ async function confirmDelete() {
 async function saveQuoteStatus(quoteId, status, quotes) {
   // Use local cache for toggle logic — avoids an extra round-trip and keeps
   // the UI snappy even when the DB write is slow or fails.
-  const localQuote = (supabase ? quotes : DEMO.quotes).find(q => q.id === quoteId);
+  const localQuote = quotes.find(q => q.id === quoteId);
   const newStatus = localQuote?.status === status ? null : status;
   if (localQuote) localQuote.status = newStatus;
-  if (!supabase) return newStatus;
   await supabase.from('broker_quotes').update({ status: newStatus }).eq('id', quoteId);
   return newStatus;
 }
@@ -250,6 +232,7 @@ function renderQuotes(quotes, configId) {
         <button class="status-btn${status === 'not-interested' ? ' active-not-interested' : ''}" data-quote-id="${q.id}" data-status="not-interested">👎 pass</button>
         ${phone ? `<a href="https://wa.me/${phone}" target="_blank" rel="noopener noreferrer" class="whatsapp-btn">💬</a>` : ''}
         <button class="delete-btn" data-quote-id="${q.id}">🗑️</button>
+        <button class="media-btn" data-quote-id="${q.id}">📷</button>
       </div>
       ${renderNotesSection(q.id)}
     </div>`;
@@ -274,6 +257,13 @@ function attachQuoteEvents(quotes) {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       showDeleteModal(btn.dataset.quoteId, quotes);
+    });
+  });
+  // Media button — opens gallery modal for that quote
+  document.querySelectorAll('.media-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showMediaModal(btn.dataset.quoteId);
     });
   });
 }
@@ -314,8 +304,93 @@ function fmtNoteDate(iso) {
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
+// ── Media Modal ──
+async function showMediaModal(quoteId) {
+  const modal = document.getElementById('media-modal');
+  const grid = document.getElementById('media-grid');
+  const empty = document.getElementById('media-empty');
+
+  modal.style.display = 'flex';
+  grid.innerHTML = '<div class="media-loading">Loading...</div>';
+  empty.style.display = 'none';
+
+  currentMedia = await loadQuoteMedia(quoteId);
+
+  if (!currentMedia.length) {
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+
+  empty.style.display = 'none';
+  grid.innerHTML = currentMedia.map((m, i) => {
+    if (m.media_type === 'image') {
+      return `<div class="media-item" data-index="${i}">
+        <img src="${esc(m.public_url)}" loading="lazy" alt="">
+      </div>`;
+    } else {
+      return `<div class="media-item media-item-video" data-index="${i}">
+        <video src="${esc(m.public_url)}" preload="metadata"></video>
+        <div class="media-play-icon">▶</div>
+      </div>`;
+    }
+  }).join('');
+}
+
+function hideMediaModal() {
+  document.getElementById('media-modal').style.display = 'none';
+}
+
+// ── Lightbox (full-screen image/video viewer) ──
+function openLightbox(index) {
+  currentMediaIndex = index;
+  document.getElementById('lightbox').style.display = 'flex';
+  renderLightboxItem();
+}
+
+function renderLightboxItem() {
+  const item = currentMedia[currentMediaIndex];
+  const content = document.querySelector('.lightbox-content');
+  const counter = document.querySelector('.lightbox-counter');
+
+  counter.textContent = `${currentMediaIndex + 1} / ${currentMedia.length}`;
+
+  if (item.media_type === 'image') {
+    content.innerHTML = `<img src="${esc(item.public_url)}" alt="">`;
+  } else {
+    content.innerHTML = `<video src="${esc(item.public_url)}" controls autoplay></video>`;
+  }
+
+  // Show/hide navigation arrows
+  document.querySelector('.lightbox-prev').style.visibility = currentMediaIndex > 0 ? 'visible' : 'hidden';
+  document.querySelector('.lightbox-next').style.visibility = currentMediaIndex < currentMedia.length - 1 ? 'visible' : 'hidden';
+}
+
+function closeLightbox() {
+  const lb = document.getElementById('lightbox');
+  // Stop any playing video before closing
+  const video = lb.querySelector('video');
+  if (video) video.pause();
+  lb.style.display = 'none';
+}
+
+function navigateLightbox(direction) {
+  const newIndex = currentMediaIndex + direction;
+  if (newIndex < 0 || newIndex >= currentMedia.length) return;
+  // Stop any playing video before navigating
+  const video = document.querySelector('.lightbox-content video');
+  if (video) video.pause();
+  currentMediaIndex = newIndex;
+  renderLightboxItem();
+}
+
 // ── Router ──
 async function route() {
+  if (!supabase) {
+    renderConfigError();
+    return;
+  }
+
   const hash = location.hash || '#/';
   const homeView = document.getElementById('home-view');
   const detailView = document.getElementById('detail-view');
@@ -354,6 +429,33 @@ function setupEvents() {
   document.getElementById('modal-confirm').addEventListener('click', confirmDelete);
   document.getElementById('delete-modal').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) hideDeleteModal();
+  });
+
+  // Media modal
+  document.querySelector('.media-modal-close').addEventListener('click', hideMediaModal);
+  document.getElementById('media-modal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) hideMediaModal();
+  });
+  // Click on a grid item → open in lightbox
+  document.getElementById('media-grid').addEventListener('click', (e) => {
+    const item = e.target.closest('.media-item');
+    if (!item) return;
+    openLightbox(parseInt(item.dataset.index));
+  });
+
+  // Lightbox controls
+  document.querySelector('.lightbox-close').addEventListener('click', closeLightbox);
+  document.querySelector('.lightbox-prev').addEventListener('click', () => navigateLightbox(-1));
+  document.querySelector('.lightbox-next').addEventListener('click', () => navigateLightbox(1));
+  document.getElementById('lightbox').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeLightbox();
+  });
+  // Keyboard: arrows to navigate, Escape to close
+  document.addEventListener('keydown', (e) => {
+    if (document.getElementById('lightbox').style.display === 'none') return;
+    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'ArrowLeft') navigateLightbox(-1);
+    if (e.key === 'ArrowRight') navigateLightbox(1);
   });
 
   // Notes delegation
